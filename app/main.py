@@ -1,6 +1,9 @@
-﻿from fastapi import FastAPI
+﻿from pathlib import Path
+
+from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.core.config import settings
@@ -16,6 +19,13 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+uploads_path = settings.uploads_path
+if not uploads_path.is_absolute():
+    uploads_path = Path(__file__).resolve().parents[2] / uploads_path
+uploads_path.mkdir(parents=True, exist_ok=True)
+
+app.mount(settings.media_url_path, StaticFiles(directory=uploads_path), name="uploads")
 app.include_router(api_router)
 
 app.add_exception_handler(AppError, app_error_handler)

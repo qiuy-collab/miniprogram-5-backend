@@ -1,4 +1,6 @@
-﻿from pydantic_settings import BaseSettings, SettingsConfigDict
+﻿from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -17,12 +19,19 @@ class Settings(BaseSettings):
     session_ttl_seconds: int = 86400
     cors_allow_origins: str = "https://servicewechat.com"
     cors_allow_origin_regex: str = r"^https?://(127\.0\.0\.1|localhost):\d+$"
+    public_base_url: str = "https://api.longxingtea.xyz"
+    media_url_path: str = "/uploads"
+    uploads_dir: str = "uploads"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8-sig", extra="ignore")
 
     @property
     def cors_allow_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_allow_origins.split(",") if origin.strip()]
+
+    @property
+    def uploads_path(self) -> Path:
+        return Path(self.uploads_dir)
 
 
 settings = Settings()
