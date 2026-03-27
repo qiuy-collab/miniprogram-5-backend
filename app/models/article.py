@@ -1,6 +1,6 @@
 ﻿import uuid
 
-from sqlalchemy import Text
+from sqlalchemy import BigInteger, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -15,3 +15,20 @@ class Article(Base):
     title: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     content_markdown: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="published")
+    cover_media_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("media_assets.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    published_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    created_by_admin_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("admin_users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    updated_by_admin_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("admin_users.id", ondelete="SET NULL"),
+        nullable=True,
+    )

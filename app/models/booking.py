@@ -31,3 +31,11 @@ class Booking(Base):
     location: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    status_code: Mapped[str] = mapped_column(Text, nullable=False, default="new")
+    internal_note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    assigned_admin_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("admin_users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    updated_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
