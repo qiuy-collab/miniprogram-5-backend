@@ -9,7 +9,8 @@ class ArticleSummary(BaseModel):
 
 
 class ArticleDetail(ArticleSummary):
-    content: list[str]
+    content_markdown: str
+    content_html: str
 
 
 class ListArticlesResponse(BaseModel):

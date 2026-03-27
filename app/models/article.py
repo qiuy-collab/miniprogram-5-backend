@@ -14,3 +14,4 @@ class Article(Base):
     date: Mapped[str] = mapped_column(Text, nullable=False)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
+    content_markdown: Mapped[str] = mapped_column(Text, nullable=False, default="")

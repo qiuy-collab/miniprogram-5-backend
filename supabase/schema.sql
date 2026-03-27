@@ -23,7 +23,8 @@ create table if not exists articles (
   id uuid primary key default gen_random_uuid(),
   date text not null,
   title text not null,
-  description text not null
+  description text not null,
+  content_markdown text not null default ''
 );
 
 create table if not exists article_contents (

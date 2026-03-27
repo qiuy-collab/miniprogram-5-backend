@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 import uuid
 
 from sqlalchemy import select
@@ -30,3 +30,8 @@ class ArticleRepository:
         )
         return list(self.db.scalars(stmt).all())
 
+    def get_article_markdown(self, article: Article) -> str:
+        if article.content_markdown:
+            return article.content_markdown
+        contents = self.list_contents(str(article.id))
+        return "\n\n".join(item.content for item in contents)
