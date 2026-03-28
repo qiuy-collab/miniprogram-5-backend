@@ -1,8 +1,11 @@
 ﻿from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
 
+from app.auth.admin_deps import get_current_admin_user_id
 from app.auth.deps import get_current_user_id
 from app.schemas.payment import (
+    AdminGetPaymentDetailResponse,
+    AdminListPaymentsResponse,
     PrepareWechatPaymentRequest,
     PrepareWechatPaymentResponse,
     SubmitPaymentRequest,
@@ -33,3 +36,13 @@ async def wechat_notify(request: Request):
     xml_text = (await request.body()).decode("utf-8", errors="ignore")
     response_xml = PaymentService.handle_wechat_notify(xml_text)
     return Response(content=response_xml, media_type="application/xml")
+
+
+@router.get("/admin/payments", response_model=AdminListPaymentsResponse)
+def admin_list_payments(admin_user_id: str = Depends(get_current_admin_user_id)):
+    return PaymentService.admin_list_payments()
+
+
+@router.get("/admin/payments/{payment_id}", response_model=AdminGetPaymentDetailResponse)
+def admin_get_payment_detail(payment_id: str, admin_user_id: str = Depends(get_current_admin_user_id)):
+    return PaymentService.admin_get_payment_detail(payment_id)

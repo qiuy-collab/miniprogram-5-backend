@@ -227,6 +227,41 @@ class PaymentService:
             raise AppError(ErrorCode.E_WRITE_FAILED, "支付确认失败", 500)
 
     @staticmethod
+    def admin_list_payments() -> dict:
+        try:
+            with SessionLocal() as db:
+                rows = PaymentRepository(db).list_admin()
+            return {"records": [PaymentService._to_admin_payment_record(row) for row in rows]}
+        except SQLAlchemyError:
+            raise AppError(ErrorCode.E_SERVICE_UNAVAILABLE, "支付数据暂不可用", 503)
+
+    @staticmethod
+    def admin_get_payment_detail(payment_id: str) -> dict:
+        try:
+            with SessionLocal() as db:
+                row = PaymentRepository(db).get_admin_by_id(payment_id)
+            if not row:
+                raise AppError(ErrorCode.E_RESOURCE_NOT_FOUND, "支付记录不存在", 404)
+            return {"record": PaymentService._to_admin_payment_record(row)}
+        except AppError:
+            raise
+        except SQLAlchemyError:
+            raise AppError(ErrorCode.E_SERVICE_UNAVAILABLE, "支付数据暂不可用", 503)
+
+    @staticmethod
+    def _to_admin_payment_record(row) -> dict:
+        return {
+            "id": str(row.id),
+            "user_id": str(row.user_id),
+            "checkout_created_at": int(row.checkout_created_at),
+            "pay_method": row.pay_method,
+            "source": row.source,
+            "paid": bool(row.paid),
+            "paid_product_ids": [str(pid) for pid in row.paid_product_ids],
+            "created_at": int(row.created_at),
+        }
+
+    @staticmethod
     def _get_checkout_session(checkout_repo: CheckoutRepository, user_id: str, checkout_created_at: int):
         session = checkout_repo.get_session(user_id)
         if not session:
