@@ -44,7 +44,8 @@ def _render_markdown_block(block: str) -> str:
         return f"<ul>{items}</ul>"
 
     if lines and all(re.match(r"\d+\.\s+", line) for line in lines):
-        items = "".join(f"<li>{_escape_inline(re.sub(r'^\d+\.\s+', '', line))}</li>" for line in lines)
+        ordered_items = [re.sub(r'^\d+\.\s+', '', line) for line in lines]
+        items = "".join(f"<li>{_escape_inline(item)}</li>" for item in ordered_items)
         return f"<ol>{items}</ol>"
 
     if lines and all(line.startswith(">") for line in lines):
