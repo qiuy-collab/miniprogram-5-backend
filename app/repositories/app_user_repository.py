@@ -22,3 +22,10 @@ class AppUserRepository:
         stmt = select(AppUser).where(AppUser.id == uid).limit(1)
         return self.db.scalars(stmt).first()
 
+    def list_admin(self) -> list[AppUser]:
+        stmt = select(AppUser).order_by(AppUser.created_at.desc())
+        return list(self.db.scalars(stmt).all())
+
+    def get_admin_by_id(self, user_id: str) -> AppUser | None:
+        return self.get_by_id(user_id)
+

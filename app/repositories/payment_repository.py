@@ -21,6 +21,14 @@ class PaymentRepository:
         )
         return self.db.scalars(stmt).first()
 
+    def list_admin(self) -> list[Payment]:
+        stmt = select(Payment).order_by(Payment.created_at.desc())
+        return list(self.db.scalars(stmt).all())
+
+    def get_admin_by_id(self, payment_id: str) -> Payment | None:
+        stmt = select(Payment).where(Payment.id == uuid.UUID(payment_id)).limit(1)
+        return self.db.scalars(stmt).first()
+
     def create(
         self,
         *,

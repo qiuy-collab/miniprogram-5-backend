@@ -27,3 +27,22 @@ class PrepareWechatPaymentResponse(BaseModel):
     package: str
     signType: Literal["MD5"]
     paySign: str
+
+
+class AdminPaymentItem(BaseModel):
+    id: str
+    user_id: str
+    checkout_created_at: int
+    pay_method: PayMethod
+    source: Literal["favorites", "product"]
+    paid: bool
+    paid_product_ids: list[str]
+    created_at: int
+
+
+class AdminListPaymentsResponse(BaseModel):
+    records: list[AdminPaymentItem]
+
+
+class AdminGetPaymentDetailResponse(BaseModel):
+    record: AdminPaymentItem

@@ -1,4 +1,4 @@
-﻿from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class BookingRecord(BaseModel):
@@ -38,3 +38,23 @@ class CreateBookingResponse(BaseModel):
 
 class ListBookingsResponse(BaseModel):
     records: list[BookingRecord]
+
+
+class AdminBookingItem(BookingRecord):
+    status_code: str
+    internal_note: str
+    assigned_admin_id: str | None = None
+    updated_at: int | None = None
+
+
+class AdminListBookingsResponse(BaseModel):
+    records: list[AdminBookingItem]
+
+
+class AdminGetBookingDetailResponse(BaseModel):
+    record: AdminBookingItem
+
+
+class AdminUpdateBookingRequest(BaseModel):
+    status_code: str = Field(min_length=1, max_length=32)
+    internal_note: str = Field(default="", max_length=500)
