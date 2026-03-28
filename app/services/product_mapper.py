@@ -34,3 +34,12 @@ def to_product_payload(row: Product) -> dict:
         "desc": row.description,
         "category": row.category,
     }
+
+
+def to_admin_product_payload(row: Product) -> dict:
+    return {
+        **to_product_payload(row),
+        "status": row.status,
+        "sort_order": row.sort_order,
+        "published_at": row.published_at,
+    }
