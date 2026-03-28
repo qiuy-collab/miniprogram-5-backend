@@ -36,3 +36,17 @@ class UpdateProfileRequest(BaseModel):
 class UpdateProfileResponse(BaseModel):
     profile: ProfileInfo
     updatedAt: int
+
+
+class AdminUserProfileItem(BaseModel):
+    user_id: str
+    created_at: int
+    profile: ProfileInfo
+
+
+class AdminListUsersResponse(BaseModel):
+    records: list[AdminUserProfileItem]
+
+
+class AdminGetUserDetailResponse(BaseModel):
+    record: AdminUserProfileItem

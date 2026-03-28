@@ -3,6 +3,7 @@
 from app.core.database import SessionLocal
 from app.errors.codes import ErrorCode
 from app.errors.exceptions import AppError
+from app.repositories.app_user_repository import AppUserRepository
 from app.repositories.profile_repository import ProfileRepository
 from app.services.utils import now_ms
 
@@ -58,3 +59,60 @@ class ProfileService:
             }
         except SQLAlchemyError:
             raise AppError(ErrorCode.E_WRITE_FAILED, "资料保存失败", 500)
+
+    @staticmethod
+    def admin_list_users() -> dict:
+        try:
+            records = []
+            with SessionLocal() as db:
+                user_repo = AppUserRepository(db)
+                profile_repo = ProfileRepository(db)
+                users = user_repo.list_admin()
+                for user in users:
+                    profile = profile_repo.get_by_user_id(str(user.id))
+                    records.append(
+                        {
+                            "user_id": str(user.id),
+                            "created_at": int(user.created_at),
+                            "profile": {
+                                "name": profile.name,
+                                "city": profile.city,
+                                "phone": profile.phone,
+                                "motto": profile.motto,
+                            }
+                            if profile
+                            else DEFAULT_PROFILE,
+                        }
+                    )
+            return {"records": records}
+        except SQLAlchemyError:
+            raise AppError(ErrorCode.E_SERVICE_UNAVAILABLE, "用户数据暂不可用", 503)
+
+    @staticmethod
+    def admin_get_user_detail(user_id: str) -> dict:
+        try:
+            with SessionLocal() as db:
+                user_repo = AppUserRepository(db)
+                profile_repo = ProfileRepository(db)
+                user = user_repo.get_admin_by_id(user_id)
+                if not user:
+                    raise AppError(ErrorCode.E_RESOURCE_NOT_FOUND, "用户不存在", 404)
+                profile = profile_repo.get_by_user_id(user_id)
+            return {
+                "record": {
+                    "user_id": str(user.id),
+                    "created_at": int(user.created_at),
+                    "profile": {
+                        "name": profile.name,
+                        "city": profile.city,
+                        "phone": profile.phone,
+                        "motto": profile.motto,
+                    }
+                    if profile
+                    else DEFAULT_PROFILE,
+                }
+            }
+        except AppError:
+            raise
+        except SQLAlchemyError:
+            raise AppError(ErrorCode.E_SERVICE_UNAVAILABLE, "用户数据暂不可用", 503)
