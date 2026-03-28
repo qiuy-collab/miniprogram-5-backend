@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 import uuid
 
 from sqlalchemy import select
@@ -48,3 +48,28 @@ class BookingRepository:
         stmt = select(Booking).where(Booking.user_id == uid).order_by(Booking.created_at.desc())
         return list(self.db.scalars(stmt).all())
 
+    def list_admin(self) -> list[Booking]:
+        stmt = select(Booking).order_by(Booking.created_at.desc())
+        return list(self.db.scalars(stmt).all())
+
+    def get_admin_by_id(self, booking_id: str) -> Booking | None:
+        bid = uuid.UUID(booking_id)
+        stmt = select(Booking).where(Booking.id == bid).limit(1)
+        return self.db.scalars(stmt).first()
+
+    def update_admin_fields(
+        self,
+        booking: Booking,
+        *,
+        status_code: str,
+        internal_note: str,
+        assigned_admin_id: str,
+        updated_at: int,
+    ) -> Booking:
+        booking.status_code = status_code
+        booking.internal_note = internal_note
+        booking.assigned_admin_id = uuid.UUID(assigned_admin_id)
+        booking.updated_at = updated_at
+        self.db.flush()
+        self.db.refresh(booking)
+        return booking
