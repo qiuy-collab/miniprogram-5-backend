@@ -49,3 +49,46 @@ class AdminRepository:
     def count_media_assets(self) -> int:
         stmt = select(func.count()).select_from(MediaAsset)
         return int(self.db.scalar(stmt) or 0)
+
+    def list_media_assets(self) -> list[MediaAsset]:
+        stmt = select(MediaAsset).order_by(MediaAsset.created_at.desc())
+        return list(self.db.scalars(stmt).all())
+
+    def get_media_asset_by_id(self, asset_id: str) -> MediaAsset | None:
+        stmt = select(MediaAsset).where(MediaAsset.id == uuid.UUID(asset_id)).limit(1)
+        return self.db.scalars(stmt).first()
+
+    def create_media_asset(
+        self,
+        *,
+        storage_key: str,
+        url: str,
+        media_type: str,
+        mime_type: str,
+        size_bytes: int,
+        width: int | None,
+        height: int | None,
+        alt_text: str,
+        status: str,
+        created_by_admin_id: str | None,
+    ) -> MediaAsset:
+        asset = MediaAsset(
+            storage_key=storage_key,
+            url=url,
+            media_type=media_type,
+            mime_type=mime_type,
+            size_bytes=size_bytes,
+            width=width,
+            height=height,
+            alt_text=alt_text,
+            status=status,
+            created_by_admin_id=uuid.UUID(created_by_admin_id) if created_by_admin_id else None,
+        )
+        self.db.add(asset)
+        self.db.flush()
+        self.db.refresh(asset)
+        return asset
+
+    def delete_media_asset(self, asset: MediaAsset) -> None:
+        self.db.delete(asset)
+        self.db.flush()

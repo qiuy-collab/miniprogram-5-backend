@@ -39,3 +39,25 @@ class AdminDashboardSummary(BaseModel):
 
 class AdminDashboardResponse(BaseModel):
     summary: AdminDashboardSummary
+
+
+class AdminMediaAssetItem(BaseModel):
+    id: str
+    storage_key: str
+    url: str
+    media_type: str
+    mime_type: str
+    size_bytes: int
+    width: int | None = None
+    height: int | None = None
+    alt_text: str
+    status: str
+    created_at: str | None = None
+
+
+class AdminMediaListResponse(BaseModel):
+    assets: list[AdminMediaAssetItem]
+
+
+class AdminUploadMediaResponse(BaseModel):
+    asset: AdminMediaAssetItem

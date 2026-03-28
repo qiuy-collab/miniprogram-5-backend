@@ -1,5 +1,6 @@
 from html import escape
 import re
+import time
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -63,6 +64,32 @@ def render_article_markdown(content_markdown: str) -> str:
     return "".join(_render_markdown_block(block) for block in blocks)
 
 
+def _serialize_public_article(row, content_markdown: str | None = None) -> dict:
+    markdown = content_markdown if content_markdown is not None else row.content_markdown
+    return {
+        "id": str(row.id),
+        "date": row.date,
+        "title": row.title,
+        "desc": row.description,
+        "content_markdown": markdown,
+        "content_html": render_article_markdown(markdown),
+    }
+
+
+def _serialize_admin_article(row, content_markdown: str | None = None) -> dict:
+    markdown = content_markdown if content_markdown is not None else row.content_markdown
+    return {
+        "id": str(row.id),
+        "date": row.date,
+        "title": row.title,
+        "desc": row.description,
+        "status": row.status,
+        "content_markdown": markdown,
+        "content_html": render_article_markdown(markdown),
+        "published_at": row.published_at,
+    }
+
+
 class ArticleService:
     @staticmethod
     def list_articles() -> dict:
@@ -78,6 +105,7 @@ class ArticleService:
                         "desc": r.description,
                     }
                     for r in rows
+                    if r.status == "published"
                 ]
             }
         except SQLAlchemyError:
@@ -90,23 +118,133 @@ class ArticleService:
             with SessionLocal() as db:
                 repo = ArticleRepository(db)
                 article = repo.get_article_by_id(article_id)
-                if not article:
+                if not article or article.status != "published":
                     raise AppError(ErrorCode.E_RESOURCE_NOT_FOUND, "文章不存在", 404)
                 content_markdown = repo.get_article_markdown(article)
 
-            return {
-                "article": {
-                    "id": str(article.id),
-                    "date": article.date,
-                    "title": article.title,
-                    "desc": article.description,
-                    "content_markdown": content_markdown,
-                    "content_html": render_article_markdown(content_markdown),
-                }
-            }
+            return {"article": _serialize_public_article(article, content_markdown)}
         except AppError:
             raise
         except ValueError:
             raise AppError(ErrorCode.E_INPUT_FORMAT_INVALID, "文章ID格式不合法", 400)
         except SQLAlchemyError:
             raise AppError(ErrorCode.E_SERVICE_UNAVAILABLE, "文章服务暂不可用", 503)
+
+    @staticmethod
+    def admin_list_articles() -> dict:
+        try:
+            with SessionLocal() as db:
+                rows = ArticleRepository(db).list_articles_for_admin()
+            return {
+                "articles": [
+                    {
+                        "id": str(r.id),
+                        "date": r.date,
+                        "title": r.title,
+                        "desc": r.description,
+                        "status": r.status,
+                        "published_at": r.published_at,
+                    }
+                    for r in rows
+                ]
+            }
+        except SQLAlchemyError:
+            raise AppError(ErrorCode.E_SERVICE_UNAVAILABLE, "后台文章列表暂不可用", 503)
+
+    @staticmethod
+    def admin_get_article_detail(article_id: str) -> dict:
+        try:
+            article_id = ensure_str_uuid(article_id)
+            with SessionLocal() as db:
+                repo = ArticleRepository(db)
+                article = repo.get_article_by_id(article_id)
+                if not article:
+                    raise AppError(ErrorCode.E_RESOURCE_NOT_FOUND, "文章不存在", 404)
+                content_markdown = repo.get_article_markdown(article)
+            return {"article": _serialize_admin_article(article, content_markdown)}
+        except AppError:
+            raise
+        except ValueError:
+            raise AppError(ErrorCode.E_INPUT_FORMAT_INVALID, "文章ID格式不合法", 400)
+        except SQLAlchemyError:
+            raise AppError(ErrorCode.E_SERVICE_UNAVAILABLE, "后台文章详情暂不可用", 503)
+
+    @staticmethod
+    def admin_save_article(
+        *,
+        article_id: str | None,
+        title: str,
+        desc: str,
+        date: str,
+        content_markdown: str,
+        status: str,
+        admin_user_id: str,
+    ) -> dict:
+        try:
+            published_at = int(time.time()) if status == "published" else None
+            with SessionLocal() as db:
+                repo = ArticleRepository(db)
+                if article_id:
+                    normalized_id = ensure_str_uuid(article_id)
+                    article = repo.get_article_by_id(normalized_id)
+                    if not article:
+                        raise AppError(ErrorCode.E_RESOURCE_NOT_FOUND, "文章不存在", 404)
+                    article = repo.update_article(
+                        article,
+                        title=title,
+                        description=desc,
+                        date=date,
+                        content_markdown=content_markdown,
+                        status=status,
+                        published_at=published_at,
+                        admin_user_id=admin_user_id,
+                    )
+                else:
+                    article = repo.create_article(
+                        title=title,
+                        description=desc,
+                        date=date,
+                        content_markdown=content_markdown,
+                        status=status,
+                        published_at=published_at,
+                        admin_user_id=admin_user_id,
+                    )
+                db.commit()
+                db.refresh(article)
+            return {"article": _serialize_admin_article(article, content_markdown)}
+        except AppError:
+            raise
+        except ValueError:
+            raise AppError(ErrorCode.E_INPUT_FORMAT_INVALID, "文章ID格式不合法", 400)
+        except SQLAlchemyError:
+            raise AppError(ErrorCode.E_WRITE_FAILED, "文章保存失败", 500)
+
+    @staticmethod
+    def admin_update_article_status(article_id: str, status: str, admin_user_id: str) -> dict:
+        try:
+            article_id = ensure_str_uuid(article_id)
+            published_at = int(time.time()) if status == "published" else None
+            with SessionLocal() as db:
+                repo = ArticleRepository(db)
+                article = repo.get_article_by_id(article_id)
+                if not article:
+                    raise AppError(ErrorCode.E_RESOURCE_NOT_FOUND, "文章不存在", 404)
+                article = repo.update_article(
+                    article,
+                    title=article.title,
+                    description=article.description,
+                    date=article.date,
+                    content_markdown=repo.get_article_markdown(article),
+                    status=status,
+                    published_at=published_at,
+                    admin_user_id=admin_user_id,
+                )
+                db.commit()
+                db.refresh(article)
+            return {"article": _serialize_admin_article(article, article.content_markdown)}
+        except AppError:
+            raise
+        except ValueError:
+            raise AppError(ErrorCode.E_INPUT_FORMAT_INVALID, "文章ID格式不合法", 400)
+        except SQLAlchemyError:
+            raise AppError(ErrorCode.E_WRITE_FAILED, "文章状态更新失败", 500)

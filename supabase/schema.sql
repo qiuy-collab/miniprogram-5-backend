@@ -1,11 +1,69 @@
--- PostgreSQL schema (plain pgsql import)
--- Contract source: service-contract.md
+-- PostgreSQL schema synced from live longxing database on 2026-03-28
 
 create extension if not exists pgcrypto;
+
+create table if not exists admin_roles (
+  id uuid primary key,
+  code text not null unique,
+  name text not null,
+  created_at bigint not null
+);
+
+create table if not exists admin_users (
+  id uuid primary key,
+  username text not null unique,
+  password_hash text not null,
+  display_name text not null,
+  status text not null,
+  created_at bigint not null,
+  updated_at bigint not null
+);
+
+create table if not exists admin_user_roles (
+  id uuid primary key,
+  admin_user_id uuid not null references admin_users(id) on delete cascade,
+  admin_role_id uuid not null references admin_roles(id) on delete cascade,
+  created_at bigint not null
+);
+
+create table if not exists admin_audit_logs (
+  id uuid primary key,
+  admin_user_id uuid references admin_users(id) on delete set null,
+  entity_type text not null,
+  entity_id text not null,
+  action text not null,
+  before_snapshot text,
+  after_snapshot text,
+  created_at bigint not null
+);
 
 create table if not exists app_users (
   id uuid primary key default gen_random_uuid(),
   created_at bigint not null default (extract(epoch from now()) * 1000)::bigint
+);
+
+create table if not exists app_sessions (
+  id uuid primary key default gen_random_uuid(),
+  login_code text not null unique,
+  session_ready boolean not null default true,
+  session_expires_at bigint not null,
+  created_at bigint not null,
+  updated_at bigint not null
+);
+
+create table if not exists media_assets (
+  id uuid primary key default gen_random_uuid(),
+  storage_key text not null,
+  url text not null,
+  media_type varchar(32) not null default 'image',
+  mime_type varchar(128) not null default '',
+  size_bytes bigint not null default 0,
+  width integer,
+  height integer,
+  alt_text text not null default '',
+  status varchar(32) not null default 'active',
+  created_by_admin_id uuid,
+  created_at timestamptz not null default now()
 );
 
 create table if not exists products (
@@ -14,7 +72,13 @@ create table if not exists products (
   price text not null,
   img text not null,
   description text not null,
-  category text not null check (category in ('tea', 'orchid', 'course'))
+  category text not null check (category in ('tea', 'orchid', 'course')),
+  status varchar(32) not null default 'published',
+  sort_order integer not null default 0,
+  cover_media_id uuid,
+  published_at timestamptz,
+  created_by_admin_id uuid,
+  updated_by_admin_id uuid
 );
 
 create index if not exists idx_products_category on products (category);
@@ -24,7 +88,12 @@ create table if not exists articles (
   date text not null,
   title text not null,
   description text not null,
-  content_markdown text not null default ''
+  content_markdown text not null default '',
+  status varchar(32) not null default 'published',
+  cover_media_id uuid,
+  published_at timestamptz,
+  created_by_admin_id uuid,
+  updated_by_admin_id uuid
 );
 
 create table if not exists article_contents (
@@ -68,7 +137,11 @@ create table if not exists bookings (
   notes text not null default '' check (char_length(notes) <= 60),
   location text not null,
   status text not null,
-  created_at bigint not null
+  created_at bigint not null,
+  status_code varchar(32) not null default 'new',
+  internal_note text not null default '',
+  assigned_admin_id uuid,
+  updated_at timestamptz
 );
 
 create index if not exists idx_bookings_user_created_at
@@ -104,15 +177,6 @@ create table if not exists payments (
 
 create index if not exists idx_payments_user_checkout_created_at
   on payments (user_id, checkout_created_at);
-
-create table if not exists app_sessions (
-  id uuid primary key default gen_random_uuid(),
-  login_code text not null unique,
-  session_ready boolean not null default true,
-  session_expires_at bigint not null,
-  created_at bigint not null,
-  updated_at bigint not null
-);
 
 create table if not exists wechat_identities (
   openid text primary key,
